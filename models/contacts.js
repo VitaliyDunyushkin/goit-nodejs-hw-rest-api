@@ -41,10 +41,13 @@ const addContact = async ({ name, email, phone }) => {
   return newContact;
 };
 
-const updateContact = async (id, { name, email, phone }) => {
+const updateContact = async (id, body) => {
   const data = await listContacts();
   const index = data.findIndex((item) => item.id === id);
   if (index === -1) return null;
+  const { name: oldName, email: oldEmail, phone: oldPhone } = data[index];
+
+  const { name = oldName, email = oldEmail, phone = oldPhone } = body;
   data[index] = { id, name, email, phone };
   await rewriteContacts(data);
   return data[index];

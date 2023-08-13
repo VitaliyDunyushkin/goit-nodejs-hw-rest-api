@@ -8,6 +8,12 @@ const contactShema = joi.object({
   phone: joi.string().required(),
 });
 
+const contactPutShema = joi.object({
+  name: joi.string(),
+  email: joi.string().email(),
+  phone: joi.string(),
+});
+
 const contacts = require("../../models/contacts");
 
 router.get("/", async (req, res, next) => {
@@ -54,7 +60,7 @@ router.post("/", async (req, res, next) => {
 
 router.put("/:contactId", async (req, res, next) => {
   try {
-    const { error } = contactShema.validate(req.body);
+    const { error } = contactPutShema.validate(req.body);
     if (error) {
       res.status(400).json({ message: "Missing fields" });
     }
