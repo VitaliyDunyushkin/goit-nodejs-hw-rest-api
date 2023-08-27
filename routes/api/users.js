@@ -3,6 +3,10 @@ const router = express.Router();
 const User = require("../../models/user");
 const bcrypt = require("bcrypt");
 const joi = require("joi");
+const jwt = require("jsonwebtoken");
+
+const JWT_SECRET = "as45wer78fgh56rtyuwhh12fhjsk28";
+// const JWT_SECRET = process.env;
 
 const userSchema = joi.object({
   password: joi.string().required(),
@@ -18,7 +22,8 @@ router.post("/register", async (req, res, next) => {
       res.status(400).json({ message: "Missing required name field" });
     }
 
-    const { email, password } = req.body;
+    const { email, password, subscription = "starter" } = req.body;
+
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -30,7 +35,42 @@ router.post("/register", async (req, res, next) => {
     return res.status(201).json({
       id: result._id,
       email,
+      subscription,
     });
+  } catch (error) {
+    if (error.message.includes("E11000 duplicate key")) {
+      res.status(409).json({ message: "Email in use" });
+    }
+    next(error);
+  }
+});
+
+router.post("/login", async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      res.status(401).json({ message: "Email or password is wrong!" });
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      res.status(401).json({ message: "Email or password is wrong!" });
+    }
+
+    const token = jwt.sign({ id: user.id }, JWT_SECRET, {
+      expiresIn: "1h",
+    });
+
+    user.token = token;
+
+    const result = await User.findByIdAndUpdate(user.id, user, {
+      new: true,
+      select: "-password -createdAt -updatedAt -_id",
+    });
+
+    return res.json(result);
   } catch (error) {
     next(error);
   }
