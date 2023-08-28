@@ -1,6 +1,7 @@
 const express = require("express");
 const joi = require("joi");
 const Contact = require("../../models/contact.js");
+const validateToken = require("../../middlewares/validateToken.js");
 
 const contactShema = joi.object({
   name: joi.string().required(),
@@ -22,7 +23,7 @@ const contactUpdateFavoriteSchema = joi.object({
 
 const router = express.Router();
 
-router.get("/", async (req, res, next) => {
+router.get("/", validateToken, async (req, res, next) => {
   try {
     const result = await Contact.find();
     return res.status(200).json(result);
@@ -31,7 +32,7 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-router.get("/:contactId", async (req, res, next) => {
+router.get("/:contactId", validateToken, async (req, res, next) => {
   try {
     const { contactId } = req.params;
     const result = await Contact.findById(contactId);
@@ -43,7 +44,7 @@ router.get("/:contactId", async (req, res, next) => {
   }
 });
 
-router.delete("/:contactId", async (req, res, next) => {
+router.delete("/:contactId", validateToken, async (req, res, next) => {
   try {
     const { contactId } = req.params;
     const result = await Contact.findByIdAndDelete(contactId);
@@ -55,7 +56,7 @@ router.delete("/:contactId", async (req, res, next) => {
   }
 });
 
-router.post("/", async (req, res, next) => {
+router.post("/", validateToken, async (req, res, next) => {
   try {
     const { error } = contactShema.validate(req.body);
     if (error) {
@@ -68,7 +69,7 @@ router.post("/", async (req, res, next) => {
   }
 });
 
-router.put("/:contactId", async (req, res, next) => {
+router.put("/:contactId", validateToken, async (req, res, next) => {
   try {
     const { error } = contactPutShema.validate(req.body);
     if (error) {
@@ -89,7 +90,7 @@ router.put("/:contactId", async (req, res, next) => {
   }
 });
 
-router.patch("/:contactId/favorite", async (req, res, next) => {
+router.patch("/:contactId/favorite", validateToken, async (req, res, next) => {
   try {
     const { error } = contactUpdateFavoriteSchema.validate(req.body);
     if (error) {

@@ -4,6 +4,7 @@ const User = require("../../models/user");
 const bcrypt = require("bcrypt");
 const joi = require("joi");
 const jwt = require("jsonwebtoken");
+const validateToken = require("../../middlewares/validateToken");
 
 const JWT_SECRET = "as45wer78fgh56rtyuwhh12fhjsk28";
 // const JWT_SECRET = process.env;
@@ -73,6 +74,33 @@ router.post("/login", async (req, res, next) => {
     return res.json(result);
   } catch (error) {
     next(error);
+  }
+});
+
+router.post("/logout", validateToken, async (req, res, next) => {
+  try {
+    const { _id } = req.user;
+    const user = await User.findByIdAndUpdate(_id, { token: null });
+
+    if (!user) {
+      res.status(401).json({ message: "Not authorized" });
+    }
+    res.status(204).json();
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/current", validateToken, async (req, res, next) => {
+  try {
+    const { email, subscription } = req.user;
+    if (!email) {
+      res.status(401).json({ message: "Not authorized" });
+    }
+
+    res.status(200).json({ email: email, subscription: subscription });
+  } catch (err) {
+    next(err);
   }
 });
 
