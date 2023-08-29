@@ -25,7 +25,9 @@ const router = express.Router();
 
 router.get("/", validateToken, async (req, res, next) => {
   try {
-    const result = await Contact.find();
+    const { _id } = req.user;
+
+    const result = await Contact.find({ owner: _id });
     return res.status(200).json(result);
   } catch (error) {
     next(error);
@@ -34,8 +36,9 @@ router.get("/", validateToken, async (req, res, next) => {
 
 router.get("/:contactId", validateToken, async (req, res, next) => {
   try {
+    const { _id } = req.user;
     const { contactId } = req.params;
-    const result = await Contact.findById(contactId);
+    const result = await Contact.findOne({ _id: contactId, owner: _id });
     if (!result) {
       res.status(404).json({ message: "Not found" });
     } else res.status(200).json(result);
@@ -46,8 +49,12 @@ router.get("/:contactId", validateToken, async (req, res, next) => {
 
 router.delete("/:contactId", validateToken, async (req, res, next) => {
   try {
+    const { _id } = req.user;
     const { contactId } = req.params;
-    const result = await Contact.findByIdAndDelete(contactId);
+    const result = await Contact.findOneAndDelete({
+      _id: contactId,
+      owner: _id,
+    });
     if (!result) {
       res.status(404).json({ message: "Not found" });
     } else res.status(200).json(result);
@@ -62,7 +69,8 @@ router.post("/", validateToken, async (req, res, next) => {
     if (error) {
       res.status(400).json({ message: "Missing required name field" });
     }
-    const result = await Contact.create(req.body);
+    const { _id } = req.user;
+    const result = await Contact.create({ ...req.body, owner: _id });
     return res.status(201).json(result);
   } catch (error) {
     next(error);
@@ -75,11 +83,20 @@ router.put("/:contactId", validateToken, async (req, res, next) => {
     if (error) {
       res.status(400).json({ message: "Missing fields" });
     }
+
+    const { _id } = req.user;
     const { contactId } = req.params;
 
-    const result = await Contact.findByIdAndUpdate(contactId, req.body, {
-      new: true,
-    });
+    const result = await Contact.findOneAndUpdate(
+      {
+        _id: contactId,
+        owner: _id,
+      },
+      req.body,
+      {
+        new: true,
+      }
+    );
 
     if (!result) {
       res.status(404).json({ message: "Not found" });
@@ -96,10 +113,19 @@ router.patch("/:contactId/favorite", validateToken, async (req, res, next) => {
     if (error) {
       res.status(400).json({ message: "Missing fields " });
     }
+
+    const { _id } = req.user;
     const { contactId } = req.params;
-    const result = await Contact.findByIdAndUpdate(contactId, req.body, {
-      new: true,
-    });
+    const result = await Contact.findOneAndUpdate(
+      {
+        _id: contactId,
+        owner: _id,
+      },
+      req.body,
+      {
+        new: true,
+      }
+    );
     if (!result) {
       res.status(404).json({ message: "Not found" });
     }

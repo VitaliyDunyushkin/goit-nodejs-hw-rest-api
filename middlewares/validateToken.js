@@ -1,7 +1,8 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
-// const { JWT_SECRET } = process.env;
-const JWT_SECRET = "as45wer78fgh56rtyuwhh12fhjsk28";
+require("dotenv").config();
+const { JWT_SECRET } = process.env;
+// const JWT_SECRET = "as45wer78fgh56rtyuwhh12fhjsk28";
 
 const validateToken = async (req, res, next) => {
   const authorizationHeader = req.headers.authorization || "";
@@ -27,7 +28,6 @@ const validateToken = async (req, res, next) => {
       res.status(401).json({ message: "Invalid token" });
     }
   }
-
   next();
 };
 

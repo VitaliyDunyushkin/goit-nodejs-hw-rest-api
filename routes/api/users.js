@@ -5,6 +5,7 @@ const bcrypt = require("bcrypt");
 const joi = require("joi");
 const jwt = require("jsonwebtoken");
 const validateToken = require("../../middlewares/validateToken");
+// require("dotenv").config();
 
 const JWT_SECRET = "as45wer78fgh56rtyuwhh12fhjsk28";
 // const JWT_SECRET = process.env;
