@@ -1,14 +1,20 @@
 const express = require("express");
 const router = express.Router();
-const User = require("../../models/user");
 const bcrypt = require("bcrypt");
 const joi = require("joi");
 const jwt = require("jsonwebtoken");
-const validateToken = require("../../middlewares/validateToken");
-// require("dotenv").config();
+const gravatar = require("gravatar");
+const fs = require("fs/promises");
+const path = require("path");
+const jimp = require("jimp");
 
-const JWT_SECRET = "as45wer78fgh56rtyuwhh12fhjsk28";
-// const JWT_SECRET = process.env;
+const User = require("../../models/user");
+const validateToken = require("../../middlewares/validateToken");
+const upload = require("../../middlewares/upload");
+
+// require("dotenv").config();
+// const JWT_SECRET = "as45wer78fgh56rtyuwhh12fhjsk28";
+const { JWT_SECRET } = process.env;
 
 const userSchema = joi.object({
   password: joi.string().required(),
@@ -29,15 +35,20 @@ router.post("/register", async (req, res, next) => {
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    const avatarURL = gravatar.url(email);
+
     const result = await User.create({
       password: hashedPassword,
       email,
+      subscription,
+      avatarURL,
     });
 
     return res.status(201).json({
       id: result._id,
       email,
       subscription,
+      avatarURL,
     });
   } catch (error) {
     if (error.message.includes("E11000 duplicate key")) {
@@ -104,5 +115,39 @@ router.get("/current", validateToken, async (req, res, next) => {
     next(err);
   }
 });
+
+router.patch(
+  "/avatars",
+  validateToken,
+  upload.single("avatar"),
+  async (req, res, next) => {
+    try {
+      const { _id } = req.user;
+      const { filename } = req.file;
+      const dirTmp = path.join(__dirname, "../../tmp", filename);
+      const newFilename = `${_id}_${filename}`;
+      const dirAvatars = path.join(
+        __dirname,
+        "../../public/avatars",
+        newFilename
+      );
+
+      await jimp.read(dirTmp).then((avatar) => {
+        return avatar.cover(250, 250).write(dirTmp);
+      });
+
+      await fs.rename(dirTmp, dirAvatars);
+      const avatarURL = path.join("avatars", newFilename);
+
+      await User.findByIdAndUpdate(_id, { avatarURL });
+
+      res.status(200).json({ avatarURL });
+
+      res.status(200);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 module.exports = router;

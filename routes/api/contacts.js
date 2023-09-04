@@ -70,7 +70,11 @@ router.post("/", validateToken, async (req, res, next) => {
       res.status(400).json({ message: "Missing required name field" });
     }
     const { _id } = req.user;
-    const result = await Contact.create({ ...req.body, owner: _id });
+
+    const result = await Contact.create({
+      ...req.body,
+      owner: _id,
+    });
     return res.status(201).json(result);
   } catch (error) {
     next(error);
