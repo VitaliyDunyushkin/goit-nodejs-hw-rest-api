@@ -21,6 +21,14 @@ const userSchema = new Schema(
       type: String,
       default: "",
     },
+    verifiedEmail: {
+      type: Boolean,
+      default: false,
+    },
+    verifyEmailToken: {
+      type: String,
+      required: [true, "Verify token is required"],
+    },
   },
   { versionKey: false, timestamps: true }
 );
