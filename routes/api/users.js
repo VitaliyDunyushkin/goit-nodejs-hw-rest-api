@@ -7,12 +7,14 @@ const gravatar = require("gravatar");
 const fs = require("fs/promises");
 const path = require("path");
 const jimp = require("jimp");
+const { nanoid } = require("nanoid");
 
 const User = require("../../models/user");
 const validateToken = require("../../middlewares/validateToken");
 const upload = require("../../middlewares/upload");
+const sendMail = require("../../helpers/sendMail");
 
-// require("dotenv").config();
+require("dotenv").config();
 // const JWT_SECRET = "as45wer78fgh56rtyuwhh12fhjsk28";
 const { JWT_SECRET } = process.env;
 
@@ -37,11 +39,20 @@ router.post("/register", async (req, res, next) => {
 
     const avatarURL = gravatar.url(email);
 
+    const verifyEmailToken = nanoid();
+
+    await sendMail({
+      to: email,
+      subject: "Please, confirm your email",
+      html: `<a href='localhost:3000/users/verify/${verifyEmailToken}'>Confirm your email</a>`,
+    });
+
     const result = await User.create({
-      password: hashedPassword,
       email,
+      password: hashedPassword,
       subscription,
       avatarURL,
+      verifyEmailToken,
     });
 
     return res.status(201).json({
@@ -49,11 +60,58 @@ router.post("/register", async (req, res, next) => {
       email,
       subscription,
       avatarURL,
+      verifyEmailToken,
     });
   } catch (error) {
     if (error.message.includes("E11000 duplicate key")) {
       res.status(409).json({ message: "Email in use" });
     }
+    next(error);
+  }
+});
+
+router.get("/verify/:token", async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    const user = await User.findOne({ verifyEmailToken: token });
+    if (!user) {
+      res.status(400).json({ message: "User already verified" });
+    }
+
+    await User.findOneAndUpdate(
+      { verifyEmailToken: token },
+      { verifiedEmail: true, verifyEmailToken: null },
+      { new: true }
+    );
+
+    return res.status(200).json({ message: "User's email verified" });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/verify", async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Missing required field email" });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (user.verifiedEmail === true) {
+      res.status(400).json({ message: "Verification has already been passed" });
+    }
+
+    await sendMail({
+      to: email,
+      subject: "Please, confirm your email",
+      html: `<a href='localhost:3000/users/verify/${user.verifyEmailToken}'>Confirm your email</a>`,
+    });
+
+    res.status(200).json({ message: "Verification email sent" });
+  } catch (error) {
     next(error);
   }
 });
@@ -70,6 +128,12 @@ router.post("/login", async (req, res, next) => {
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       res.status(401).json({ message: "Email or password is wrong!" });
+    }
+
+    if (user.verifiedEmail === false) {
+      res.status(400).json({
+        message: "Your email is not verified! Please check your mailbox!",
+      });
     }
 
     const token = jwt.sign({ id: user.id }, JWT_SECRET, {
